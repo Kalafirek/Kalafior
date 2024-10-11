@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Śledzenie Wydatków i Zarobków</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #loginForm, #tracker {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 20px;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+        input, select, button {
+            width: 100%;
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2ecc71;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #2980b9;
+            color: white;
+        }
+        td button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+        td button.delete-btn {
+            background-color: #e74c3c;
+            color: white;
+        }
+        td button.delete-btn:hover {
+            opacity: 0.8;
+        }
+        .hidden {
+            display: none;
+        }
+        .disabled {
+            background-color: grey;
+            cursor: not-allowed;
+        }
+        .summary-section {
+            background-color: #ecf0f1;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .edit-button, .reset-button {
+            background-color: #8e44ad;
+            color: white;
+            margin-top: 10px;
+            margin-right: 10px;
+        }
+        .edit-button:hover, .reset-button:hover {
+            opacity: 0.8;
+        }
+        .summary-item {
+            margin-bottom: 10px;
+        }
+        .summary-item span {
+            font-weight: bold;
+        }
+        .summary-actions {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+        /* Responsywność */
+        @media (max-width: 600px) {
+            input, select, button {
+                font-size: 14px;
+            }
+            th, td {
+                padding: 8px;
+            }
+            .summary-actions {
+                position: static;
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Śledzenie Wydatków i Zarobków</h1>
+    
+    <div id="loginForm">
+        <h2>Logowanie</h2>
+        <label for="username">Nazwa użytkownika:</label>
+        <input type="text" id="username" placeholder="Nazwa użytkownika">
+        
+        <label for="password">Hasło:</label>
+        <input type="password" id="password" placeholder="Hasło">
+        
+        <button onclick="login()">Zaloguj się</button>
+        <p id="loginError" style="color: red;" class="hidden">Błędna nazwa użytkownika lub hasło.</p>
+    </div>
+
+    <div id="tracker" class="hidden">
+        <div class="summary-section">
+            <h2>Podsumowanie</h2>
+            <div class="summary-item"><span>Zarobki:</span> <span id="podsumowanieZarobki">0.00 zł</span></div>
+            <div class="summary-item"><span>Wydatki:</span> <span id="podsumowanieWydatki">0.00 zł</span></div>
+            <div class="summary-item"><span>Saldo:</span> <span id="podsumowanieSaldo">0.00 zł</span></div>
+            <div class="summary-item"><span>Pozostało do 150 milionów:</span> <span id="podsumowaniePozostalo">150000000.00 zł</span></div>
+            <div class="summary-actions">
+                <button id="editSummaryButton" class="hidden edit-button" onclick="edytujPodsumowanie()">Edytuj Podsumowanie</button>
+                <button id="resetSummaryButton" class="hidden reset-button" onclick="resetSummary()">Resetuj Podsumowanie</button>
+            </div>
+        </div>
+
+        <h2>Zarobki</h2>
+        <label for="zarobki">Kwota:</label>
+        <input type="number" id="zarobki" placeholder="Wprowadź zarobki">
+
+        <label for="zarobkiOpis">Opis:</label>
+        <input type="text" id="zarobkiOpis" placeholder="Opis zarobków">
+
+        <label for="zarobkiKategoria">Kategoria:</label>
+        <select id="zarobkiKategoria">
+            <option value="Brak">Brak</option>
+            <option value="Auta">Auta</option>
+            <option value="Ubrania">Ubrania</option>
+            <option value="Przedmioty">Przedmioty</option>
+        </select>
+
+        <button onclick="dodajZarobki()">Dodaj Zarobki</button>
+
+        <h2>Lista Zarobków</h2>
+        <table id="listaZarobkow">
+            <thead>
+                <tr>
+                    <th>Kwota</th>
+                    <th>Opis</th>
+                    <th>Kategoria</th>
+                    <th>Kto dodał</th>
+                    <th>Data</th>
+                    <th>Akcja</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <h2>Wydatki</h2>
+        <label for="wydatki">Kwota:</label>
+        <input type="number" id="wydatki" placeholder="Wprowadź wydatki">
+
+        <label for="wydatkiOpis">Opis:</label>
+        <input type="text" id="wydatkiOpis" placeholder="Opis wydatków">
+
+        <label for="wydatkiKategoria">Kategoria:</label>
+        <select id="wydatkiKategoria">
+            <option value="Brak">Brak</option>
+            <option value="Auta">Auta</option>
+            <option value="Ubrania">Ubrania</option>
+            <option value="Przedmioty">Przedmioty</option>
+        </select>
+
+        <button onclick="dodajWydatki()">Dodaj Wydatki</button>
+
+        <h2>Lista Wydatków</h2>
+        <table id="listaWydatkow">
+            <thead>
+                <tr>
+                    <th>Kwota</th>
+                    <th>Opis</th>
+                    <th>Kategoria</th>
+                    <th>Kto dodał</th>
+                    <th>Data</th>
+                    <th>Akcja</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <h2>Akcje</h2>
+        <button onclick="logout()">Wyloguj się</button>
+    </div>
+
+    <script>
+        // Inicjalizacja zmiennych
+        let isAdmin = false;
+        let currentUser = '';
+
+        // Definicja użytkowników
+        const users = {
+            admin: { username: "admin", password: "admin321", isAdmin: true },
+            admin2: { username: "admin2", password: "admin2", isAdmin: false }
+        };
+
+        // Funkcja logowania
+        function login() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            
+            if (users[username] && users[username].password === password) {
+                isAdmin = users[username].isAdmin;
+                currentUser = username;
+                document.getElementById('loginForm').classList.add('hidden');
+                document.getElementById('tracker').classList.remove('hidden');
+                document.getElementById('loginError').classList.add('hidden');
+                document.getElementById('editSummaryButton').classList.toggle('hidden', !isAdmin);
+                document.getElementById('resetSummaryButton').classList.toggle('hidden', !isAdmin);
+                loadData();
+                updateSummary();
+                wyswietlListeZarobkow();
+                wyswietlListeWydatkow();
+            } else {
+                document.getElementById('loginError').classList.remove('hidden');
+            }
+        }
+
+        // Funkcja wylogowania
+        function logout() {
+            document.getElementById('loginForm').classList.remove('hidden');
+            document.getElementById('tracker').classList.add('hidden');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            isAdmin = false;
+            currentUser = '';
+            updateSummary();
+            document.querySelector('#listaZarobkow tbody').innerHTML = '';
+            document.querySelector('#listaWydatkow tbody').innerHTML = '';
+        }
+
+        // Funkcja dodawania zarobków
+        function dodajZarobki() {
+            const kwota = parseFloat(document.getElementById('zarobki').value);
+            const opis = document.getElementById('zarobkiOpis').value.trim();
+            const kategoria = document.getElementById('zarobkiKategoria').value;
+            const kto = currentUser;
+            const data = new Date().toLocaleDateString();
+
+            if (isNaN(kwota) || kwota <= 0) {
+                alert('Proszę wprowadzić prawidłową kwotę zarobków.');
+                return;
+            }
+
+            let zarobkiLista = JSON.parse(localStorage.getItem('zarobkiLista')) || [];
+            zarobkiLista.push({ kwota, opis, kategoria, kto, data });
+            localStorage.setItem('zarobkiLista', JSON.stringify(zarobkiLista));
+
+            updateSummary();
+            wyswietlListeZarobkow();
+
+            // Resetowanie pól
+            document.getElementById('zarobki').value = '';
+            document.getElementById('zarobkiOpis').value = '';
+            document.getElementById('zarobkiKategoria').value = 'Brak';
+        }
+
+        // Funkcja dodawania wydatków
+        function dodajWydatki() {
+            const kwota = parseFloat(document.getElementById('wydatki').value);
+            const opis = document.getElementById('wydatkiOpis').value.trim();
+            const kategoria = document.getElementById('wydatkiKategoria').value;
+            const kto = currentUser;
+            const data = new Date().toLocaleDateString();
+
+            if (isNaN(kwota) || kwota <= 0) {
+                alert('Proszę wprowadzić prawidłową kwotę wydatków.');
+                return;
+            }
+
+            let wydatkiLista = JSON.parse(localStorage.getItem('wydatkiLista')) || [];
+            wydatkiLista.push({ kwota, opis, kategoria, kto, data });
+            localStorage.setItem('wydatkiLista', JSON.stringify(wydatkiLista));
+
+            updateSummary();
+            wyswietlListeWydatkow();
+
+            // Resetowanie pól
+            document.getElementById('wydatki').value = '';
+            document.getElementById('wydatkiOpis').value = '';
+            document.getElementById('wydatkiKategoria').value = 'Brak';
+        }
+
+        // Funkcja wyświetlania listy zarobków
+        function wyswietlListeZarobkow() {
+            const tbody = document.querySelector('#listaZarobkow tbody');
+            tbody.innerHTML = '';
+            let zarobkiLista = JSON.parse(localStorage.getItem('zarobkiLista')) || [];
+
+            zarobkiLista.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.kwota.toFixed(2)} zł</td>
+                    <td>${item.opis || '-'}</td>
+                    <td>${item.kategoria}</td>
+                    <td>${item.kto}</td>
+                    <td>${item.data}</td>
+                    <td>
+                        ${isAdmin ? `<button class="delete-btn" onclick="usunZarobki(${index})">Usuń</button>` : `<button class="delete-btn disabled" disabled>Usuń</button>`}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Funkcja wyświetlania listy wydatków
+        function wyswietlListeWydatkow() {
+            const tbody = document.querySelector('#listaWydatkow tbody');
+            tbody.innerHTML = '';
+            let wydatkiLista = JSON.parse(localStorage.getItem('wydatkiLista')) || [];
+
+            wydatkiLista.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.kwota.toFixed(2)} zł</td>
+                    <td>${item.opis || '-'}</td>
+                    <td>${item.kategoria}</td>
+                    <td>${item.kto}</td>
+                    <td>${item.data}</td>
+                    <td>
+                        ${isAdmin ? `<button class="delete-btn" onclick="usunWydatki(${index})">Usuń</button>` : `<button class="delete-btn disabled" disabled>Usuń</button>`}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Funkcja aktualizacji podsumowania
+        function updateSummary() {
+            let zarobkiLista = JSON.parse(localStorage.getItem('zarobkiLista')) || [];
+            let wydatkiLista = JSON.parse(localStorage.getItem('wydatkiLista')) || [];
+
+            let totalZarobki = zarobkiLista.reduce((acc, item) => acc + item.kwota, 0);
+            let totalWydatki = wydatkiLista.reduce((acc, item) => acc + item.kwota, 0);
+            let saldo = totalZarobki - totalWydatki;
+            let pozostalo = 150000000 - saldo; // Zmieniono z 150000 na 150000000
+
+            document.getElementById('podsumowanieZarobki').innerText = `${totalZarobki.toFixed(2)} zł`;
+            document.getElementById('podsumowanieWydatki').innerText = `${totalWydatki.toFixed(2)} zł`;
+            document.getElementById('podsumowanieSaldo').innerText = `${saldo.toFixed(2)} zł`;
+            document.getElementById('podsumowaniePozostalo').innerText = `${pozostalo.toFixed(2)} zł`;
+        }
+
+        // Funkcja usuwania zarobków
+        function usunZarobki(index) {
+            if (!isAdmin) return;
+
+            let zarobkiLista = JSON.parse(localStorage.getItem('zarobkiLista')) || [];
+            if (index >= 0 && index < zarobkiLista.length) {
+                zarobkiLista.splice(index, 1);
+                localStorage.setItem('zarobkiLista', JSON.stringify(zarobkiLista));
+                wyswietlListeZarobkow();
+                updateSummary();
+            }
+        }
+
+        // Funkcja usuwania wydatków
+        function usunWydatki(index) {
+            if (!isAdmin) return;
+
+            let wydatkiLista = JSON.parse(localStorage.getItem('wydatkiLista')) || [];
+            if (index >= 0 && index < wydatkiLista.length) {
+                wydatkiLista.splice(index, 1);
+                localStorage.setItem('wydatkiLista', JSON.stringify(wydatkiLista));
+                wyswietlListeWydatkow();
+                updateSummary();
+            }
+        }
+
+        // Funkcja ładowania danych z localStorage
+        function loadData() {
+            wyswietlListeZarobkow();
+            wyswietlListeWydatkow();
+            updateSummary();
+        }
+
+        // Funkcja edycji podsumowania (tylko admin)
+        function edytujPodsumowanie() {
+            if (!isAdmin) return;
+
+            // Edycja zarobków
+            const zarobkiInput = prompt('Wprowadź nowe zarobki:', document.getElementById('podsumowanieZarobki').innerText.replace(' zł',''));
+            if (zarobkiInput !== null) {
+                const parsedZarobki = parseFloat(zarobkiInput);
+                if (!isNaN(parsedZarobki) && parsedZarobki >= 0) {
+                    let zarobkiLista = JSON.parse(localStorage.getItem('zarobkiLista')) || [];
+                    const currentTotalZarobki = zarobkiLista.reduce((acc, item) => acc + item.kwota, 0);
+                    const difference = parsedZarobki - currentTotalZarobki;
+                    if (difference > 0) {
+                        // Dodajemy różnicę jako zarobki admina
+                        zarobkiLista.push({ kwota: difference, opis: 'Różnica edycji', kategoria: 'Brak', kto: 'admin', data: new Date().toLocaleDateString() });
+                        localStorage.setItem('zarobkiLista', JSON.stringify(zarobkiLista));
+                    } else if (difference < 0) {
+                        // Dodajemy różnicę jako wydatki admina
+                        let wydatkiLista = JSON.parse(localStorage.getItem('wydatkiLista')) || [];
+                        wydatkiLista.push({ kwota: Math.abs(difference), opis: 'Różnica edycji', kategoria: 'Brak', kto: 'admin', data: new Date().toLocaleDateString() });
+                        localStorage.setItem('wydatkiLista', JSON.stringify(wydatkiLista));
+                    }
+                    updateSummary();
+                    wyswietlListeZarobkow();
+                    wyswietlListeWydatkow();
+                } else {
+                    alert('Wprowadzono nieprawidłową wartość.');
+                }
+            }
+
+            // Edycja wydatków
+            const wydatkiInput = prompt('Wprowadź nowe wydatki:', document.getElementById('podsumowanieWydatki').innerText.replace(' zł',''));
+            if (wydatkiInput !== null) {
+                const parsedWydatki = parseFloat(wydatkiInput);
+                if (!isNaN(parsedWydatki) && parsedWydatki >= 0) {
+                    let wydatkiLista = JSON.parse(localStorage.getItem('wydatkiLista')) || [];
+                    const currentTotalWydatki = wydatkiLista.reduce((acc, item) => acc + item.kwota, 0);
+                    const difference = parsedWydatki - currentTotalWydatki;
+                    if (difference > 0) {
+                        wydatkiLista.push({ kwota: difference, opis: 'Różnica edycji', kategoria: 'Brak', kto: 'admin', data: new Date().toLocaleDateString() });
+                        localStorage.setItem('wydatkiLista', JSON.stringify(wydatkiLista));
+                    } else if (difference < 0) {
+                        let zarobkiLista = JSON.parse(localStorage.getItem('zarobkiLista')) || [];
+                        zarobkiLista.push({ kwota: Math.abs(difference), opis: 'Różnica edycji', kategoria: 'Brak', kto: 'admin', data: new Date().toLocaleDateString() });
+                        localStorage.setItem('zarobkiLista', JSON.stringify(zarobkiLista));
+                    }
+                    updateSummary();
+                    wyswietlListeZarobkow();
+                    wyswietlListeWydatkow();
+                } else {
+                    alert('Wprowadzono nieprawidłową wartość.');
+                }
+            }
+        }
+
+        // Funkcja resetowania podsumowania (tylko admin)
+        function resetSummary() {
+            if (!isAdmin) return;
+
+            if (confirm('Czy na pewno chcesz zresetować wszystkie zarobki i wydatki?')) {
+                localStorage.removeItem('zarobkiLista');
+                localStorage.removeItem('wydatkiLista');
+                updateSummary();
+                wyswietlListeZarobkow();
+                wyswietlListeWydatkow();
+            }
+        }
+    </script>
+</body>
+</html>
